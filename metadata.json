@@ -1,0 +1,8 @@
+{
+  "name": "Cura4Pif",
+  "description": "A comprehensive health companion for your cats. Track weight, manage vaccinations, schedule vet appointments, and monitor their well-being with beautiful charts and reminders.",
+  "requestFramePermissions": [],
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}

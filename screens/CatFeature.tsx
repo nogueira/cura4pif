@@ -353,13 +353,30 @@ export const CatDetail: React.FC = () => {
           <Card className="h-48 flex items-center justify-center" onClick={() => navigate(`/cats/${id}/progress`)}>
              {cat.weightHistory.length > 0 ? (
                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={cat.weightHistory}>
+                  <AreaChart data={cat.weightHistory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                      <defs>
                       <linearGradient id="colorWeightPreview" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#13ec5b" stopOpacity={0.2}/>
                         <stop offset="95%" stopColor="#13ec5b" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4E4E7" opacity={0.3} />
+                    <XAxis 
+                        dataKey="date" 
+                        tickFormatter={(value) => new Date(value).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })}
+                        tick={{ fill: '#71717a', fontSize: 10 }}
+                        axisLine={false}
+                        tickLine={false}
+                        minTickGap={20}
+                        dy={5}
+                    />
+                    <YAxis 
+                        domain={['auto', 'auto']}
+                        tick={{ fill: '#71717a', fontSize: 10 }}
+                        axisLine={false}
+                        tickLine={false}
+                        width={35}
+                    />
                     <Area type="monotone" dataKey="weight" stroke="#13ec5b" strokeWidth={3} fillOpacity={1} fill="url(#colorWeightPreview)" />
                   </AreaChart>
                </ResponsiveContainer>
@@ -914,7 +931,7 @@ export const Progress: React.FC = () => {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4E4E7" opacity={0.3} />
                     <XAxis 
                         dataKey="date" 
-                        tickFormatter={(value) => new Date(value).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                        tickFormatter={(value) => new Date(value).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })}
                         tick={{ fill: '#71717a', fontSize: 12 }}
                         axisLine={false}
                         tickLine={false}

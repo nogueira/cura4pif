@@ -196,10 +196,20 @@ export const Login: React.FC = () => {
         if (data.session) {
             navigate('/home');
         } else {
-            // Se ainda não houver sessão, o Supabase exigiu confirmação ou algo pendente.
-            // Exibimos uma mensagem neutra e enviamos para o login.
-            alert('Cadastro realizado! Faça login para continuar.');
-            setAuthMode('login');
+            // Tentativa de login automático (fallback)
+            // Se o signUp não retornou sessão, tentamos logar explicitamente
+            const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            });
+
+            if (loginData.session) {
+                navigate('/home');
+            } else {
+                // Se falhar, é porque o backend realmente exige confirmação de email
+                alert('Cadastro realizado! Por favor, verifique se a opção "Confirm Email" está desativada no painel do Supabase, ou verifique seu e-mail.');
+                setAuthMode('login');
+            }
         }
       }
     } catch (error: any) {

@@ -285,7 +285,7 @@ export const Login: React.FC = () => {
         </Button>
       </form>
 
-      <p className="text-center text-xs text-slate-400 mt-8">v0.9</p>
+      <p className="text-center text-xs text-slate-400 mt-8">v0.91</p>
     </div>
   );
 };

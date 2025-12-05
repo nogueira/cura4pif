@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Plus, ChevronRight, Edit2, Cake, Scissors, Activity, Flag, Calendar, Share, ArrowLeft, Scale, User, TrendingUp, TrendingDown, Minus, PawPrint, ChevronDown, Trash2, Loader2, RefreshCw, Camera, Star } from 'lucide-react';
+import { Plus, ChevronRight, Edit2, Cake, Scissors, Activity, Flag, Calendar, Share, ArrowLeft, Scale, User, TrendingUp, TrendingDown, Minus, PawPrint, ChevronDown, Trash2, Loader2, RefreshCw, Camera, Star, X, Save, Pencil } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { Header, Card, Button, Input } from '../components/UI';
 import { supabase } from '../supabaseClient';
@@ -92,12 +92,12 @@ export const Home: React.FC = () => {
       return <Minus className="w-4 h-4 text-slate-400" />;
   };
 
-  if (loading) return <div className="h-screen flex items-center justify-center bg-gray-50 dark:bg-dark-bg"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+  if (loading) return <div className="h-screen flex items-center justify-center bg-transparent"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
 
   return (
-    <div className="bg-gray-50 dark:bg-dark-bg min-h-screen pb-24">
+    <div className="bg-transparent min-h-screen pb-24">
       {/* Modern Header */}
-      <div className="pt-8 pb-6 px-6 bg-white dark:bg-dark-card rounded-b-[2.5rem] shadow-sm mb-6 border-b border-zinc-100 dark:border-zinc-800">
+      <div className="pt-8 pb-6 px-6 bg-white/80 dark:bg-dark-card/80 backdrop-blur-md rounded-b-[2.5rem] shadow-sm mb-6 border-b border-zinc-100 dark:border-zinc-800">
           <div className="flex justify-between items-start mb-4">
               <div>
                   <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 flex items-center gap-2">
@@ -131,7 +131,7 @@ export const Home: React.FC = () => {
       {/* Content */}
       <div className="px-5 flex flex-col gap-5">
         {cats.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="flex flex-col items-center justify-center py-12 text-center bg-white/50 dark:bg-dark-card/50 backdrop-blur-sm rounded-3xl mx-4 border border-zinc-100 dark:border-zinc-800">
             <div className="w-32 h-32 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-6 text-slate-300 dark:text-slate-600">
                <PawPrint className="w-16 h-16" />
             </div>
@@ -146,7 +146,7 @@ export const Home: React.FC = () => {
             <div 
                 key={cat.id} 
                 onClick={() => navigate(`/cats/${cat.id}`)} 
-                className="group relative bg-white dark:bg-dark-card rounded-[2rem] p-4 shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden active:scale-[0.98] transition-all duration-200"
+                className="group relative bg-white/80 dark:bg-dark-card/80 backdrop-blur-md rounded-[2rem] p-4 shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden active:scale-[0.98] transition-all duration-200"
             >
               {/* Decorative background element */}
               <div className="absolute -right-8 -top-8 w-40 h-40 bg-gradient-to-br from-primary/10 to-transparent rounded-full opacity-50 blur-2xl group-hover:opacity-80 transition-opacity"></div>
@@ -193,9 +193,7 @@ export const Home: React.FC = () => {
                        {/* Progress Bar for Goal */}
                        {cat.weight && cat.goalWeight && (
                           <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-2 rounded-full overflow-hidden relative">
-                             {/* Indicator Logic: 
-                                 Visual representation relative to goal and slight buffer
-                             */}
+                             {/* Indicator Logic */}
                              <div 
                                 className="absolute left-0 top-0 bottom-0 bg-primary rounded-full" 
                                 style={{ width: `${Math.min((cat.weight / Math.max(cat.weight, cat.goalWeight * 1.2)) * 100, 100)}%` }}
@@ -229,53 +227,165 @@ export const CatDetail: React.FC = () => {
   const navigate = useNavigate();
   const [cat, setCat] = useState<Cat | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Edit Modal State
+  const [editingRecord, setEditingRecord] = useState<WeightRecord | null>(null);
+  const [editForm, setEditForm] = useState({ weight: '', date: '' });
+  const [saving, setSaving] = useState(false);
+
+  const fetchCatDetail = async () => {
+    if (!id) return;
+    
+    const { data: catData, error } = await supabase
+      .from('cats')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    // Fetch weight history
+    const { data: weightData } = await supabase
+      .from('weight_records')
+      .select('*')
+      .eq('cat_id', id)
+      .order('date', { ascending: true });
+
+    setCat({
+      id: catData.id,
+      name: catData.name,
+      breed: catData.breed,
+      birthDate: catData.birth_date,
+      gender: catData.gender,
+      neutered: catData.neutered,
+      weight: catData.weight,
+      goalWeight: catData.goal_weight,
+      image: catData.image_url || 'https://placekitten.com/300/300',
+      activityLevel: catData.activity_level,
+      weightHistory: weightData || []
+    });
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const fetchCatDetail = async () => {
-      if (!id) return;
-      
-      const { data: catData, error } = await supabase
-        .from('cats')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) {
-        console.error(error);
-        return;
-      }
-
-      // Fetch weight history
-      const { data: weightData } = await supabase
-        .from('weight_records')
-        .select('*')
-        .eq('cat_id', id)
-        .order('date', { ascending: true });
-
-      setCat({
-        id: catData.id,
-        name: catData.name,
-        breed: catData.breed,
-        birthDate: catData.birth_date,
-        gender: catData.gender,
-        neutered: catData.neutered,
-        weight: catData.weight,
-        goalWeight: catData.goal_weight,
-        image: catData.image_url || 'https://placekitten.com/300/300',
-        activityLevel: catData.activity_level,
-        weightHistory: weightData || []
-      });
-      setLoading(false);
-    };
-
     fetchCatDetail();
   }, [id]);
 
-  if (loading) return <div className="h-screen flex items-center justify-center bg-gray-50 dark:bg-dark-bg"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+  const handleEditClick = (record: WeightRecord) => {
+      setEditingRecord(record);
+      setEditForm({ weight: record.weight.toString(), date: record.date });
+  };
+
+  const handleDeleteRecord = async () => {
+      if (!editingRecord) return;
+      if (!window.confirm('Tem certeza que deseja excluir este registro?')) return;
+      
+      setSaving(true);
+      try {
+          const { error } = await supabase.from('weight_records').delete().eq('id', editingRecord.id);
+          if (error) throw error;
+          
+          await fetchCatDetail();
+          setEditingRecord(null);
+      } catch (e) {
+          console.error(e);
+          alert('Erro ao excluir registro.');
+      } finally {
+          setSaving(false);
+      }
+  };
+
+  const handleUpdateRecord = async () => {
+      if (!editingRecord || !editForm.weight || !editForm.date) return;
+      
+      setSaving(true);
+      try {
+          const { error } = await supabase.from('weight_records').update({
+              weight: parseFloat(editForm.weight.replace(',', '.')),
+              date: editForm.date
+          }).eq('id', editingRecord.id);
+
+          if (error) throw error;
+
+          // Check if we updated the most recent record, if so, update cat's current weight
+          // We can just rely on fetchCatDetail to get the latest weight from DB logic or update it manually if needed.
+          // For simplicity, we assume the backend trigger or manual update elsewhere handles `cat.weight`, 
+          // or we just let the display update on next fetch. 
+          // However, to keep it sync:
+          const sortedHistory = [...cat!.weightHistory].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          if (sortedHistory.length > 0 && sortedHistory[0].id === editingRecord.id) {
+             // If we edited the latest one, update the cat table
+             await supabase.from('cats').update({ 
+                 weight: parseFloat(editForm.weight.replace(',', '.')) 
+             }).eq('id', id);
+          }
+
+          await fetchCatDetail();
+          setEditingRecord(null);
+      } catch (e) {
+          console.error(e);
+          alert('Erro ao atualizar registro.');
+      } finally {
+          setSaving(false);
+      }
+  };
+
+  if (loading) return <div className="h-screen flex items-center justify-center bg-transparent"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   if (!cat) return <div>Cat not found</div>;
 
   return (
-    <div className="bg-gray-50 dark:bg-dark-bg min-h-screen pb-24">
+    <div className="bg-transparent min-h-screen pb-24 relative">
+      
+      {/* Edit Modal */}
+      {editingRecord && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+              <div className="bg-white dark:bg-dark-card w-full max-w-sm rounded-2xl p-6 shadow-xl border border-zinc-100 dark:border-zinc-800">
+                  <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white">Editar Peso</h3>
+                      <button onClick={() => setEditingRecord(null)} className="text-slate-400 hover:text-slate-600">
+                          <X className="w-6 h-6" />
+                      </button>
+                  </div>
+                  
+                  <div className="flex flex-col gap-4">
+                      <Input 
+                        label="Peso (kg)" 
+                        type="number" 
+                        step="0.01"
+                        value={editForm.weight} 
+                        onChange={e => setEditForm({...editForm, weight: e.target.value})} 
+                      />
+                      <Input 
+                        label="Data" 
+                        type="date" 
+                        value={editForm.date} 
+                        onChange={e => setEditForm({...editForm, date: e.target.value})} 
+                      />
+                  </div>
+
+                  <div className="flex gap-3 mt-8">
+                      <button 
+                         onClick={handleDeleteRecord}
+                         disabled={saving}
+                         className="flex-1 h-12 flex items-center justify-center rounded-xl border border-red-200 text-red-500 font-bold hover:bg-red-50 transition-colors"
+                      >
+                         <Trash2 className="w-5 h-5" />
+                      </button>
+                      <button 
+                         onClick={handleUpdateRecord}
+                         disabled={saving}
+                         className="flex-[3] h-12 flex items-center justify-center gap-2 rounded-xl bg-primary text-slate-900 font-bold hover:bg-primary-400 transition-colors shadow-lg shadow-primary/20"
+                      >
+                         {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-5 h-5" /> Salvar</>}
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
       <Header 
         title="Detalhes do Gato" 
         onBack={() => navigate('/home')}
@@ -305,7 +415,7 @@ export const CatDetail: React.FC = () => {
 
         <section>
           <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3 px-1">Informações Gerais</h3>
-          <div className="bg-white dark:bg-dark-card rounded-2xl overflow-hidden shadow-sm border border-zinc-100 dark:border-zinc-800">
+          <div className="bg-white/70 dark:bg-dark-card/70 backdrop-blur-md rounded-2xl overflow-hidden shadow-sm border border-zinc-100 dark:border-zinc-800">
             {[
               { label: 'Data de Nascimento', value: cat.birthDate ? new Date(cat.birthDate).toLocaleDateString('pt-BR') : 'N/A', icon: <Cake className="w-5 h-5" /> },
               { label: 'Gênero', value: cat.gender, icon: <User className="w-5 h-5" /> },
@@ -326,7 +436,7 @@ export const CatDetail: React.FC = () => {
 
         <section>
           <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3 px-1">Saúde</h3>
-          <div className="bg-white dark:bg-dark-card rounded-2xl overflow-hidden shadow-sm border border-zinc-100 dark:border-zinc-800">
+          <div className="bg-white/70 dark:bg-dark-card/70 backdrop-blur-md rounded-2xl overflow-hidden shadow-sm border border-zinc-100 dark:border-zinc-800">
             {[
               { label: 'Peso Atual', value: cat.weight ? `${cat.weight} kg` : 'N/A', icon: <Scale className="w-5 h-5" /> },
               { label: 'Meta de Peso', value: cat.goalWeight ? `${cat.goalWeight} kg` : 'N/A', icon: <Flag className="w-5 h-5" /> },
@@ -347,10 +457,10 @@ export const CatDetail: React.FC = () => {
 
         <section>
           <div className="flex justify-between items-center mb-3 px-1">
-             <h3 className="text-lg font-bold text-slate-900 dark:text-white">Histórico de Peso</h3>
-             <button onClick={() => navigate(`/cats/${id}/progress`)} className="text-sm font-bold text-primary hover:text-primary-600">Ver Completo</button>
+             <h3 className="text-lg font-bold text-slate-900 dark:text-white">Resumo de Peso</h3>
+             <button onClick={() => navigate(`/cats/${id}/progress`)} className="text-sm font-bold text-primary hover:text-primary-600">Ver Tela Cheia</button>
           </div>
-          <Card className="h-48 flex items-center justify-center" onClick={() => navigate(`/cats/${id}/progress`)}>
+          <Card className="h-48 flex items-center justify-center bg-white/70 dark:bg-dark-card/70 backdrop-blur-md" onClick={() => navigate(`/cats/${id}/progress`)}>
              {cat.weightHistory.length > 0 ? (
                <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={cat.weightHistory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -386,9 +496,39 @@ export const CatDetail: React.FC = () => {
           </Card>
         </section>
 
+        {/* Detailed History List */}
+        <section className="mb-20">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3 px-1">Histórico Detalhado</h3>
+            <div className="bg-white/70 dark:bg-dark-card/70 backdrop-blur-md rounded-2xl overflow-hidden shadow-sm border border-zinc-100 dark:border-zinc-800">
+                {cat.weightHistory.length === 0 ? (
+                    <div className="p-6 text-center text-slate-500 text-sm">Nenhum registro encontrado.</div>
+                ) : (
+                    [...cat.weightHistory].reverse().map((record, i, arr) => (
+                        <div key={record.id} className={`flex items-center justify-between p-4 ${i !== arr.length - 1 ? 'border-b border-zinc-100 dark:border-zinc-800' : ''}`}>
+                            <div className="flex items-center gap-4">
+                                <div className="h-10 w-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-slate-500 text-xs font-bold">
+                                    {new Date(record.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-base font-bold text-slate-900 dark:text-white">{record.weight} kg</span>
+                                    <span className="text-xs text-slate-400">{new Date(record.date).getFullYear()}</span>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => handleEditClick(record)}
+                                className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                            >
+                                <Edit2 className="w-5 h-5" />
+                            </button>
+                        </div>
+                    ))
+                )}
+            </div>
+        </section>
+
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white dark:from-dark-bg via-white/80 dark:via-dark-bg/80 to-transparent">
+      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white dark:from-dark-bg via-white/80 dark:via-dark-bg/80 to-transparent z-10">
         <Button onClick={() => navigate(`/cats/${id}/weight/add`)} className="bg-zinc-900 text-white dark:bg-primary dark:text-slate-900 gap-2">
            <Plus className="w-5 h-5" /> Adicionar Pesagem
         </Button>
@@ -616,7 +756,6 @@ export const EditCat: React.FC = () => {
     }
   };
 
-  // SQL Fix snippets
   const SQL_FIX_STORAGE = `
 -- Habilitar Storage Público (Run in SQL Editor)
 insert into storage.buckets (id, name, public) 
@@ -665,7 +804,7 @@ create policy "Allow anonymous read keep_alive" on public.keep_alive for select 
 `;
 
   return (
-    <div className="bg-gray-50 dark:bg-dark-bg min-h-screen flex flex-col relative">
+    <div className="bg-transparent min-h-screen flex flex-col relative">
       
       {/* Help Modal for RLS Errors */}
       {showSqlHelp.show && (
@@ -765,7 +904,7 @@ create policy "Allow anonymous read keep_alive" on public.keep_alive for select 
             <div className="grid grid-cols-2 gap-4">
                <label className="flex flex-col w-full">
                   <p className="text-slate-900 dark:text-white text-base font-medium leading-normal pb-2">Gênero</p>
-                  <div className="flex w-full items-center rounded-xl bg-white dark:bg-dark-card border border-zinc-200 dark:border-zinc-700 overflow-hidden h-14 px-4 focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary">
+                  <div className="flex w-full items-center rounded-xl bg-white/70 dark:bg-dark-card/70 backdrop-blur-md border border-zinc-200 dark:border-zinc-700 overflow-hidden h-14 px-4 focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary">
                      <select 
                         className="w-full bg-transparent text-slate-900 dark:text-white outline-none" 
                         value={formData.gender}
@@ -784,7 +923,7 @@ create policy "Allow anonymous read keep_alive" on public.keep_alive for select 
                 <Input label="Meta (kg)" type="number" step="0.1" value={formData.goalWeight} onChange={e => setFormData({...formData, goalWeight: e.target.value})} placeholder="0.0" />
             </div>
 
-            <div className="flex items-center gap-3 p-4 bg-white dark:bg-dark-card rounded-xl border border-zinc-200 dark:border-zinc-700">
+            <div className="flex items-center gap-3 p-4 bg-white/70 dark:bg-dark-card/70 backdrop-blur-md rounded-xl border border-zinc-200 dark:border-zinc-700">
                <input 
                   type="checkbox" 
                   checked={formData.neutered} 
@@ -847,11 +986,11 @@ export const WeightEntry: React.FC = () => {
   };
 
   return (
-    <div className="bg-gray-50 dark:bg-dark-bg min-h-screen flex flex-col">
+    <div className="bg-transparent min-h-screen flex flex-col">
        <Header title="Registrar Peso" onBack={() => navigate(-1)} />
        
        <main className="flex-1 p-6 flex flex-col items-center">
-          <div className="bg-white dark:bg-dark-card p-6 rounded-2xl w-full flex flex-col items-center gap-6 shadow-sm">
+          <div className="bg-white/70 dark:bg-dark-card/70 backdrop-blur-md p-6 rounded-2xl w-full flex flex-col items-center gap-6 shadow-sm">
              <div className="text-center">
                 <p className="text-sm text-slate-500 mb-2">Peso em Kg</p>
                 <input 
@@ -905,8 +1044,8 @@ export const Progress: React.FC = () => {
   if (!cat) return <div className="p-4">Loading...</div>;
 
   return (
-    <div className="bg-gray-50 dark:bg-dark-bg min-h-screen flex flex-col">
-       <header className="sticky top-0 z-20 flex items-center justify-between bg-gray-50/80 dark:bg-dark-bg/80 p-4 pb-2 backdrop-blur-sm">
+    <div className="bg-transparent min-h-screen flex flex-col">
+       <header className="sticky top-0 z-20 flex items-center justify-between bg-white/80 dark:bg-dark-card/80 p-4 pb-2 backdrop-blur-md">
           <button onClick={() => navigate(-1)} className="p-2"><ArrowLeft className="text-slate-900 dark:text-white"/></button>
           <h1 className="font-bold text-lg text-slate-900 dark:text-white">Progresso de {cat.name}</h1>
           <button className="p-2"><Share className="text-slate-900 dark:text-white" /></button>
@@ -919,7 +1058,7 @@ export const Progress: React.FC = () => {
           </div>
 
           <div className="h-72 w-full px-4 mt-4">
-             <div className="w-full h-full bg-white dark:bg-dark-card rounded-2xl p-4 shadow-sm border border-zinc-100 dark:border-zinc-800">
+             <div className="w-full h-full bg-white/70 dark:bg-dark-card/70 backdrop-blur-md rounded-2xl p-4 shadow-sm border border-zinc-100 dark:border-zinc-800">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>

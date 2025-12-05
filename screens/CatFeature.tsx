@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, ChevronRight, Edit2, Cake, Scissors, Activity, Flag, Calendar, Share, ArrowLeft, Scale, User, TrendingUp, TrendingDown, Minus, PawPrint, ChevronDown, Trash2, Loader2, RefreshCw, Camera, Star } from 'lucide-react';
-import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip } from 'recharts';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { Header, Card, Button, Input } from '../components/UI';
 import { supabase } from '../supabaseClient';
 import { Cat, WeightRecord } from '../types';
@@ -901,23 +901,42 @@ export const Progress: React.FC = () => {
              <h2 className="text-4xl font-bold text-slate-900 dark:text-white mt-1">{cat.weight} kg</h2>
           </div>
 
-          <div className="h-64 w-full px-2 mt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={history}>
-                <defs>
-                  <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#13ec5b" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#13ec5b" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="date" hide />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#27272A', border: 'none', borderRadius: '8px', color: '#fff' }}
-                  itemStyle={{ color: '#13ec5b' }}
-                />
-                <Area type="monotone" dataKey="weight" stroke="#13ec5b" strokeWidth={3} fillOpacity={1} fill="url(#colorWeight)" />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="h-72 w-full px-4 mt-4">
+             <div className="w-full h-full bg-white dark:bg-dark-card rounded-2xl p-4 shadow-sm border border-zinc-100 dark:border-zinc-800">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#13ec5b" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#13ec5b" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4E4E7" opacity={0.3} />
+                    <XAxis 
+                        dataKey="date" 
+                        tickFormatter={(value) => new Date(value).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                        tick={{ fill: '#71717a', fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
+                        dy={10}
+                    />
+                    <YAxis 
+                        domain={['auto', 'auto']}
+                        tick={{ fill: '#71717a', fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
+                        unit="kg"
+                    />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#27272A', border: 'none', borderRadius: '8px', color: '#fff' }}
+                      itemStyle={{ color: '#13ec5b' }}
+                      labelStyle={{ color: '#A1A1AA', marginBottom: '4px' }}
+                      labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'long' })}
+                    />
+                    <Area type="monotone" dataKey="weight" stroke="#13ec5b" strokeWidth={3} fillOpacity={1} fill="url(#colorWeight)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+             </div>
           </div>
        </main>
     </div>
